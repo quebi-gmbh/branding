@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- quebi · q badge · OPAQUE construction.
+     Used by the LIGHT variant: mint disc with a solid black q painted on top.
+     Descender is clipped to the disc circle so the tail cannot protrude. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <clipPath id="disc-clip">
+      <circle cx="50" cy="50" r="50"/>
+    </clipPath>
+  </defs>
+  <!-- disc -->
+  <circle cx="50" cy="50" r="50" fill="#2dd4a8"/>
+  <!-- q + cut, clipped inside the disc -->
+  <g clip-path="url(#disc-clip)">
+    <g stroke="#030712" stroke-width="9" fill="none" stroke-linecap="round">
+      <circle cx="50" cy="50" r="30"/>
+      <line x1="80" y1="50" x2="80" y2="95"/>
+    </g>
+    <!-- horizontal cut slot, painted in the disc colour -->
+    <rect x="10" y="45.5" width="80" height="9" fill="#2dd4a8"/>
+  </g>
+</svg>

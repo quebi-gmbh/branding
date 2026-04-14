@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- quebi · q badge · KNOCKOUT construction.
+     Used by the DARK variant: mint disc with the q literally removed (mask).
+     The surface behind the badge shows through the q cut-out.
+     The horizontal cut slot is preserved as disc material. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <mask id="q-knockout-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <rect x="0" y="0" width="100" height="100" fill="white"/>
+      <g stroke="black" stroke-width="9" fill="none" stroke-linecap="round">
+        <circle cx="50" cy="50" r="30"/>
+        <line x1="80" y1="50" x2="80" y2="95"/>
+      </g>
+      <!-- cut slot kept as disc material (white = keep) -->
+      <rect x="10" y="45.5" width="80" height="9" fill="white"/>
+    </mask>
+  </defs>
+  <circle cx="50" cy="50" r="50" fill="#2dd4a8" mask="url(#q-knockout-mask)"/>
+</svg>

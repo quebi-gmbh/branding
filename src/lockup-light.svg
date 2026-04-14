@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- quebi · full lockup · LIGHT variant.
+     Opaque q badge (mint disc + black q) + black "uebi".
+     Badge x=0..100; wordmark x=106..304 (letter-origins inside its own frame).
+     viewBox: 346 x 100. overflow="visible" so the b ascender doesn't clip.
+
+     Requires ./fonts/Outfit-Light.ttf OR outlining before export.
+     See uebi-wordmark.svg for the font-face rationale. -->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 346 100" width="346" height="100"
+     overflow="visible">
+  <defs>
+    <style type="text/css"><![CDATA[
+      @font-face {
+        font-family: "Outfit";
+        font-style: normal;
+        font-weight: 300;
+        font-display: block;
+        src: url("./fonts/Outfit-Light.ttf") format("truetype");
+      }
+      .uebi {
+        font-family: "Outfit", "Inter", "Helvetica Neue", Arial, sans-serif;
+        font-weight: 300;
+        font-size: 115px;
+        dominant-baseline: middle;
+        text-anchor: start;
+      }
+    ]]></style>
+    <clipPath id="disc-clip-l">
+      <circle cx="50" cy="50" r="50"/>
+    </clipPath>
+  </defs>
+
+  <!-- q badge (opaque) -->
+  <g>
+    <circle cx="50" cy="50" r="50" fill="#2dd4a8"/>
+    <g clip-path="url(#disc-clip-l)">
+      <g stroke="#030712" stroke-width="9" fill="none" stroke-linecap="round">
+        <circle cx="50" cy="50" r="30"/>
+        <line x1="80" y1="50" x2="80" y2="95"/>
+      </g>
+      <rect x="10" y="45.5" width="80" height="9" fill="#2dd4a8"/>
+    </g>
+  </g>
+
+  <!-- uebi wordmark — letters offset to 106/172/238/304 -->
+  <text class="uebi" y="50" fill="#030712">
+    <tspan x="106">u</tspan>
+    <tspan x="172">e</tspan>
+    <tspan x="238">b</tspan>
+    <tspan x="304">i</tspan>
+  </text>
+</svg>

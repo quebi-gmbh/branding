@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- quebi · full lockup · DARK variant.
+     Knockout q badge (mint disc with q cut through) + mint "uebi".
+     Meant to be placed on a dark surface (#030712) so the knockout reveals it.
+     viewBox: 346 x 100. overflow="visible" so the b ascender doesn't clip.
+
+     Requires ./fonts/Outfit-Light.ttf OR outlining before export.
+     See uebi-wordmark.svg for the font-face rationale. -->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 346 100" width="346" height="100"
+     overflow="visible">
+  <defs>
+    <style type="text/css"><![CDATA[
+      @font-face {
+        font-family: "Outfit";
+        font-style: normal;
+        font-weight: 300;
+        font-display: block;
+        src: url("./fonts/Outfit-Light.ttf") format("truetype");
+      }
+      .uebi {
+        font-family: "Outfit", "Inter", "Helvetica Neue", Arial, sans-serif;
+        font-weight: 300;
+        font-size: 115px;
+        dominant-baseline: middle;
+        text-anchor: start;
+      }
+    ]]></style>
+    <mask id="q-knockout-mask-d" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <rect x="0" y="0" width="100" height="100" fill="white"/>
+      <g stroke="black" stroke-width="9" fill="none" stroke-linecap="round">
+        <circle cx="50" cy="50" r="30"/>
+        <line x1="80" y1="50" x2="80" y2="95"/>
+      </g>
+      <rect x="10" y="45.5" width="80" height="9" fill="white"/>
+    </mask>
+  </defs>
+
+  <!-- knockout q badge -->
+  <circle cx="50" cy="50" r="50" fill="#2dd4a8" mask="url(#q-knockout-mask-d)"/>
+
+  <!-- uebi wordmark in mint -->
+  <text class="uebi" y="50" fill="#2dd4a8">
+    <tspan x="106">u</tspan>
+    <tspan x="172">e</tspan>
+    <tspan x="238">b</tspan>
+    <tspan x="304">i</tspan>
+  </text>
+</svg>
