@@ -12,6 +12,7 @@
 
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, copyFileSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { execSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { get as httpsGet } from 'node:https';
@@ -35,6 +36,20 @@ const PAPER = tokens.colors.paper;
 const PNG_SIZES = tokens.exports.png_sizes_px;
 
 const manifest = [];
+
+// Version string: prefer the pushed tag (GITHUB_REF_NAME on tag triggers),
+// then fall back to `git describe` locally, then to 'dev'.
+function resolveVersion() {
+  const ref = process.env.GITHUB_REF_NAME;
+  if (process.env.GITHUB_REF_TYPE === 'tag' && ref) return ref;
+  try {
+    return execSync('git describe --tags --always --dirty', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString().trim() || 'dev';
+  } catch {
+    return 'dev';
+  }
+}
+const VERSION = resolveVersion();
 
 // ────────────────────── helpers ──────────────────────
 
@@ -273,6 +288,7 @@ function renderShowcase() {
   header{padding:56px 56px 32px;background:#fff;border-bottom:1px solid var(--line)}
   header h1{margin:0 0 8px;font-size:32px;font-weight:600;letter-spacing:-0.02em}
   header p{margin:6px 0;color:#444;max-width:760px;font-size:15px}
+  header .version{display:inline-block;margin-left:10px;padding:2px 10px;border-radius:999px;background:#030712;color:#2dd4a8;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:500;letter-spacing:0;vertical-align:middle}
   main{padding:16px 56px 96px;max-width:1400px;margin:0 auto}
   section{margin:56px 0}
   h2{margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600}
@@ -321,7 +337,7 @@ function renderShowcase() {
 </head>
 <body>
 <header>
-  <h1>quebi · brand assets</h1>
+  <h1>quebi · brand assets <span class="version">${VERSION}</span></h1>
   <p>Source SVGs, raster exports, and favicon bundle — generated from <code>src/</code> by <code>pnpm run build</code>. Two pinned variants, two colours: <code>#030712</code> and <code>#2dd4a8</code>.</p>
 </header>
 <main>
@@ -435,7 +451,7 @@ ${qDark ? `<section>
 </section>
 
 <footer style="margin-top:80px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px">
-  <p>Generated ${new Date().toISOString().slice(0, 10)} · see <code>manifest.json</code> for sha256s and byte sizes.</p>
+  <p>quebi-branding <code>${VERSION}</code> · generated ${new Date().toISOString().slice(0, 10)} · see <code>manifest.json</code> for sha256s and byte sizes.</p>
 </footer>
 
 </main>
@@ -491,6 +507,7 @@ async function main() {
   manifest.sort((a, b) => a.path.localeCompare(b.path));
   writeFileSync(join(DIST, 'manifest.json'), JSON.stringify({
     brand: tokens.brand,
+    version: VERSION,
     generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
     files: manifest,
   }, null, 2));

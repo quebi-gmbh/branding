@@ -101,14 +101,15 @@ try {
 } catch (e) { fail(`webmanifest parse error: ${e.message}`); }
 
 section('Package zip');
-const zipPath = join(ROOT, 'quebi-branding.zip');
-if (existsSync(zipPath)) {
-  const s = statSync(zipPath);
-  s.size > 50_000
-    ? ok(`quebi-branding.zip = ${(s.size / 1024).toFixed(1)} KB`)
-    : fail(`quebi-branding.zip suspiciously small: ${s.size} bytes`);
+import { readdirSync } from 'node:fs';
+const zips = readdirSync(ROOT).filter((n) => n.startsWith('quebi-branding-') && n.endsWith('.zip'));
+if (zips.length === 0) {
+  skip('no quebi-branding-*.zip present — run `pnpm run package` to create');
 } else {
-  skip('quebi-branding.zip not present — run `pnpm run package` to create');
+  for (const z of zips) {
+    const s = statSync(join(ROOT, z));
+    s.size > 50_000 ? ok(`${z} = ${(s.size / 1024).toFixed(1)} KB`) : fail(`${z} suspiciously small: ${s.size} bytes`);
+  }
 }
 
 console.log();
