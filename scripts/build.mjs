@@ -117,6 +117,60 @@ async function squircle(size, bg) {
 
 // ────────────────────── stages ──────────────────────
 
+// ───── size-tiered badge sources ─────
+//
+// At small raster sizes, the default 9-unit stroke (9% of the 100-unit
+// badge canvas) aliases to ~1.4 px at 16 px output — blurry. We thicken
+// the stroke (and the matching cut slot) below 128 px so the q reads
+// clean at favicon sizes, matching how fonts ship optical sizes.
+//
+// Stroke choice verified visually: 14 at 16 px → ~2.2 px → rounds to a
+// solid 2 px stroke. 11 at 32 px → ~3.5 px, same at 64 → 7 px.
+const STROKE_BUCKETS = [
+  { maxSize: 24,   strokeWidth: 14 },
+  { maxSize: 96,   strokeWidth: 11 },
+  { maxSize: Infinity, strokeWidth: 9 },
+];
+function strokeFor(size) {
+  return STROKE_BUCKETS.find((b) => size <= b.maxSize).strokeWidth;
+}
+
+function qBadgeOpaqueSvg(sw) {
+  const cutY = (100 - sw) / 2;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120">
+  <defs><clipPath id="disc-clip"><circle cx="50" cy="50" r="50"/></clipPath></defs>
+  <circle cx="50" cy="50" r="50" fill="#2dd4a8"/>
+  <g clip-path="url(#disc-clip)">
+    <g stroke="#030712" stroke-width="${sw}" fill="none" stroke-linecap="round">
+      <circle cx="50" cy="50" r="30"/>
+      <line x1="80" y1="50" x2="80" y2="95"/>
+    </g>
+    <rect x="10" y="${cutY}" width="80" height="${sw}" fill="#2dd4a8"/>
+  </g>
+</svg>`;
+}
+function qBadgeKnockoutSvg(sw) {
+  const cutY = (100 - sw) / 2;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120">
+  <defs>
+    <mask id="q-knockout-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <rect x="0" y="0" width="100" height="100" fill="white"/>
+      <g stroke="black" stroke-width="${sw}" fill="none" stroke-linecap="round">
+        <circle cx="50" cy="50" r="30"/>
+        <line x1="80" y1="50" x2="80" y2="95"/>
+      </g>
+      <rect x="10" y="${cutY}" width="80" height="${sw}" fill="white"/>
+    </mask>
+  </defs>
+  <circle cx="50" cy="50" r="50" fill="#2dd4a8" mask="url(#q-knockout-mask)"/>
+</svg>`;
+}
+function qBadgeSvg(variant, sw) {
+  return variant === 'light' ? qBadgeOpaqueSvg(sw) : qBadgeKnockoutSvg(sw);
+}
+
 async function stageSvg(outlinedByName) {
   const targets = [
     { name: 'q-light.svg', srcPath: join(SRC, 'q-badge-opaque.svg') },
@@ -147,26 +201,22 @@ async function stageSvg(outlinedByName) {
 }
 
 async function stagePng(outlinedByName) {
-  const svgs = {
-    'q-light': readFileSync(join(SRC, 'q-badge-opaque.svg'), 'utf8'),
-    'q-dark': readFileSync(join(SRC, 'q-badge-knockout.svg'), 'utf8'),
-    'lockup-light': outlinedByName['lockup-light-outlined.svg'],
-    'lockup-dark': outlinedByName['lockup-dark-outlined.svg'],
-  };
-
   for (const size of PNG_SIZES) {
-    // q-light: rendered on transparent (mint on transparent).
-    write(join(DIST, 'png', `q-light-${size}.png`), await rasteriseSquare(svgs['q-light'], size));
-
-    // q-dark knockout: transparent variant + dark-surface variant.
-    const qDark = await rasteriseSquare(svgs['q-dark'], size);
-    write(join(DIST, 'png', `q-dark-${size}-transparent.png`), qDark);
-    write(join(DIST, 'png', `q-dark-${size}.png`), await onBackground(qDark, SURFACE_DARK, size));
+    const sw = strokeFor(size);
+    for (const variant of ['light', 'dark']) {
+      const svg = qBadgeSvg(variant, sw);
+      const transparent = await rasteriseSquare(svg, size);
+      write(join(DIST, 'png', `q-${variant}-${size}.png`), transparent);
+      write(join(DIST, 'png', `q-${variant}-${size}-on-light.png`),
+        await onBackground(transparent, PAPER, size));
+      write(join(DIST, 'png', `q-${variant}-${size}-on-dark.png`),
+        await onBackground(transparent, SURFACE_DARK, size));
+    }
 
     // Lockups: need legible wordmark — skip sizes below 180.
     if (size < 180) continue;
-    const llBuf = await rasterise(svgs['lockup-light'], size);
-    const ldBuf = await rasterise(svgs['lockup-dark'], size);
+    const llBuf = await rasterise(outlinedByName['lockup-light-outlined.svg'], size);
+    const ldBuf = await rasterise(outlinedByName['lockup-dark-outlined.svg'], size);
     const lh = Math.round((size * 100) / 346);
     const padToSquare = async (buf, bg) => sharp({
       create: { width: size, height: size, channels: 4, background: bg },
@@ -180,12 +230,12 @@ async function stagePng(outlinedByName) {
 }
 
 async function stageFavicon() {
-  const qDarkSvg = readFileSync(join(SRC, 'q-badge-knockout.svg'), 'utf8');
-  const qLightSvg = readFileSync(join(SRC, 'q-badge-opaque.svg'), 'utf8');
+  // Each favicon size picks its own stroke bucket — small ones are thicker.
+  const raster = (variant, size) => rasteriseSquare(qBadgeSvg(variant, strokeFor(size)), size);
 
-  const fav16 = await rasteriseSquare(qDarkSvg, 16);
-  const fav32 = await rasteriseSquare(qDarkSvg, 32);
-  const fav48 = await rasteriseSquare(qDarkSvg, 48);
+  const fav16 = await raster('dark', 16);
+  const fav32 = await raster('dark', 32);
+  const fav48 = await raster('dark', 48);
   write(join(DIST, 'favicon', 'favicon-16.png'), fav16);
   write(join(DIST, 'favicon', 'favicon-32.png'), fav32);
 
@@ -193,7 +243,7 @@ async function stageFavicon() {
   write(join(DIST, 'favicon', 'favicon.ico'), ico);
 
   // apple-touch-icon: light variant on white squircle, 180x180, r=36.
-  const appleInner = await rasteriseSquare(qLightSvg, Math.round(180 * 0.75));
+  const appleInner = await raster('light', Math.round(180 * 0.75));
   const appleBg = await squircle(180, '#ffffff');
   const apple = await sharp(appleBg).composite([{
     input: appleInner,
@@ -204,7 +254,7 @@ async function stageFavicon() {
 
   // android-chrome: dark variant on dark squircle.
   for (const size of [192, 512]) {
-    const inner = await rasteriseSquare(qDarkSvg, Math.round(size * 0.75));
+    const inner = await raster('dark', Math.round(size * 0.75));
     const bg = await squircle(size, SURFACE_DARK);
     const composed = await sharp(bg).composite([{
       input: inner,
@@ -249,11 +299,19 @@ function renderShowcase() {
     return assetCard(f, cls);
   }).join('\n');
 
-  const qLight = byBucket('png/q-light').map((f) => assetCard(f, 'on-paper')).join('\n');
-  const qDark = byBucket('png/q-dark').filter((f) => f.path.endsWith('-transparent.png') === false && !f.path.includes('transparent'))
-    .map((f) => assetCard(f, 'on-dark')).join('\n');
-  const qDarkTransparent = byBucket('png/q-dark').filter((f) => f.path.includes('transparent'))
-    .map((f) => assetCard(f, 'on-dark')).join('\n');
+  const pngBgFor = (p) => p.includes('-on-light') ? 'on-paper' : p.includes('-on-dark') ? 'on-dark'
+    : /\/q-dark-/.test(p) || /\/lockup-dark-/.test(p) ? 'on-dark' : 'on-paper';
+  const qGroup = (variant, suffix) => byBucket(`png/q-${variant}-`)
+    .filter((f) => suffix === 'transparent'
+      ? !f.path.includes('-on-light') && !f.path.includes('-on-dark')
+      : f.path.includes(`-${suffix}`))
+    .map((f) => assetCard(f, pngBgFor(f.path))).join('\n');
+  const qLightTransparent = qGroup('light', 'transparent');
+  const qLightOnLight = qGroup('light', 'on-light');
+  const qLightOnDark = qGroup('light', 'on-dark');
+  const qDarkTransparent = qGroup('dark', 'transparent');
+  const qDarkOnLight = qGroup('dark', 'on-light');
+  const qDarkOnDark = qGroup('dark', 'on-dark');
   const lockupLight = byBucket('png/lockup-light').map((f) => assetCard(f, 'on-paper')).join('\n');
   const lockupDark = byBucket('png/lockup-dark').map((f) => assetCard(f, 'on-dark')).join('\n');
   const favicons = byBucket('favicon/').map((f) => {
@@ -418,21 +476,53 @@ function renderShowcase() {
 </section>
 
 <section>
-  <h2>PNG · q badge · light variant</h2>
-  <div class="grid">${qLight}</div>
+  <h2>Optical sizing</h2>
+  <p>Below 128 px the q’s stroke is thickened so it doesn’t blur at favicon sizes. The design stays the same mark — only the stroke weight and matching cut slot change by bucket.</p>
+  <table class="rules">
+    <thead><tr><th>Size bucket</th><th>stroke-width</th><th>cut height</th></tr></thead>
+    <tbody>
+      <tr><td>≤ 24 px</td><td>14</td><td>14</td></tr>
+      <tr><td>32 – 96 px</td><td>11</td><td>11</td></tr>
+      <tr><td>≥ 128 px</td><td>9 (default)</td><td>9</td></tr>
+    </tbody>
+  </table>
 </section>
 
 <section>
-  <h2>PNG · q badge · dark knockout (transparent)</h2>
-  <p>Transparent background — the knockout q reveals whatever surface the asset is placed on.</p>
+  <h2>PNG · q light · transparent</h2>
+  <p>Default — mint disc + black q on transparent.</p>
+  <div class="grid">${qLightTransparent}</div>
+</section>
+
+<section>
+  <h2>PNG · q light · on light background</h2>
+  <p>Pre-composited on paper (<code>#ffffff</code>).</p>
+  <div class="grid">${qLightOnLight}</div>
+</section>
+
+<section>
+  <h2>PNG · q light · on dark background</h2>
+  <p>Pre-composited on surface (<code>#030712</code>). Note: the black q disappears into the dark surface — for dark backgrounds, prefer the dark (knockout) variant.</p>
+  <div class="grid">${qLightOnDark}</div>
+</section>
+
+<section>
+  <h2>PNG · q dark (knockout) · transparent</h2>
+  <p>Default — mint disc with the q cut through to whatever surface the asset is placed on.</p>
   <div class="grid">${qDarkTransparent}</div>
 </section>
 
-${qDark ? `<section>
-  <h2>PNG · q badge · dark knockout on surface</h2>
-  <p>Pre-composited onto <code>#030712</code> for convenience.</p>
-  <div class="grid">${qDark}</div>
-</section>` : ''}
+<section>
+  <h2>PNG · q dark · on light background</h2>
+  <p>Pre-composited on paper — the knockout reveals white.</p>
+  <div class="grid">${qDarkOnLight}</div>
+</section>
+
+<section>
+  <h2>PNG · q dark · on dark background</h2>
+  <p>Pre-composited on surface (<code>#030712</code>) — the knockout reveals the surface.</p>
+  <div class="grid">${qDarkOnDark}</div>
+</section>
 
 <section>
   <h2>PNG · lockup · light</h2>
@@ -471,9 +561,9 @@ async function validate() {
   // Sanity: centre pixel of q-light-256 is near-black (the q glyph).
   const buf = readFileSync(join(DIST, 'png', 'q-light-256.png'));
   const { data, info } = await sharp(buf).raw().toBuffer({ resolveWithObject: true });
-  // Top of the bowl: (x=50, y=20) in SVG units → centre-x, 20% down. Stroke
-  // sits on the black q glyph. Centre (50,50) is the mint cut slot, not the q.
-  const idx = (Math.round(info.height * 0.2) * info.width + Math.floor(info.width / 2)) * info.channels;
+  // Top of the bowl: SVG (50, 20) inside a 120-unit viewBox at (-10,-10).
+  // That maps to (50 - -10)/120 = 50% x, (20 - -10)/120 = 25% y of output.
+  const idx = (Math.round(info.height * 0.25) * info.width + Math.floor(info.width / 2)) * info.channels;
   const [r, g, b] = [data[idx], data[idx + 1], data[idx + 2]];
   const dark = r < 40 && g < 40 && b < 40;
   if (!dark) throw new Error(`Validation: q-light-256 centre pixel is ${r},${g},${b} — expected near-black`);

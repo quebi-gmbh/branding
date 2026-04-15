@@ -74,7 +74,10 @@ for (const rel of EXPECTED) {
 
 section('PNG size coverage');
 for (const size of tokens.exports.png_sizes_px) {
-  const variants = [`q-light-${size}.png`, `q-dark-${size}-transparent.png`, `q-dark-${size}.png`];
+  const variants = [];
+  for (const v of ['light', 'dark']) {
+    variants.push(`q-${v}-${size}.png`, `q-${v}-${size}-on-light.png`, `q-${v}-${size}-on-dark.png`);
+  }
   if (size >= 180) variants.push(`lockup-light-${size}.png`, `lockup-dark-${size}.png`);
   for (const v of variants) {
     existsSync(join(DIST, 'png', v)) ? ok(v) : fail(`missing: png/${v}`);
