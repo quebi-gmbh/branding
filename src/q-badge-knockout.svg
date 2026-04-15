@@ -3,7 +3,8 @@
      Used by the DARK variant: mint disc with the q literally removed (mask).
      The surface behind the badge shows through the q cut-out.
      The horizontal cut slot is preserved as disc material. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+<!-- viewBox extends 10 units beyond the mark on every side = 10% safe-area padding. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120">
   <defs>
     <mask id="q-knockout-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
       <rect x="0" y="0" width="100" height="100" fill="white"/>

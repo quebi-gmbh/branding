@@ -39,7 +39,7 @@ Everything listed in `src/tokens.json → exports`:
 | Bucket | Files |
 |---|---|
 | `dist/svg/` | `q-light.svg`, `q-dark.svg`, `lockup-light.svg`, `lockup-dark.svg`, plus `*-outlined.svg` intermediates |
-| `dist/png/` | `q-{light,dark}-{16..1024}.png`, `q-dark-{…}-transparent.png`, `lockup-{light,dark}-{16..1024}.png` |
+| `dist/png/` | For each badge size: `q-{light,dark}-{size}.png` (transparent), `q-{light,dark}-{size}-on-light.png` (#ffffff), `q-{light,dark}-{size}-on-dark.png` (#030712). Lockups 180–1024: `lockup-light-{size}.png` on paper, `lockup-dark-{size}.png` transparent |
 | `dist/favicon/` | `favicon.ico` (16/32/48), `favicon-16.png`, `favicon-32.png`, `apple-touch-icon.png` (180, light on white squircle), `android-chrome-{192,512}.png` (dark on dark squircle), `site.webmanifest` |
 | `dist/` | `manifest.json` (path/bytes/sha256 for every file) |
 
@@ -68,6 +68,23 @@ spot).
 to the surface, "uebi" in mint. On varied/photographic backgrounds the
 cut-out reveals whatever is behind the badge — that's the point of the
 knockout.
+
+## Optical sizing
+
+The q's stroke thickens at small raster sizes so the mark reads crisp at
+favicon sizes instead of aliasing into a blur. The `build.mjs` pipeline
+generates the badge SVG fresh per output size using the bucket it falls
+into:
+
+| Size bucket | stroke-width | cut height |
+|---|---|---|
+| ≤ 24 px | 14 | 14 |
+| 32 – 96 px | 11 | 11 |
+| ≥ 128 px | 9 (default) | 9 |
+
+Bowl and descender geometry stay identical — only the stroke weight and
+matching cut-slot height change. The default (9) is what the source SVGs
+in `src/` carry and what gets copied into `dist/svg/`.
 
 ## Master grid
 
