@@ -21,8 +21,8 @@
     "@resvg/resvg-js": "^2.6.2",
     "archiver": "^8.0.0",
     "opentype.js": "^2.0.0",
-    "png-to-ico": "^3.0.1",
-    "sharp": "^0.34.5",
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.3",
     "svgo": "^4.0.1"
   }
 }
