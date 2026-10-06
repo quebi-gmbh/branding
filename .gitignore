@@ -1,5 +1,8 @@
 node_modules/
 dist/
-src/fonts/Outfit-Light.ttf
+src/fonts/Outfit-Variable.ttf
 quebi-branding-*.zip
 .DS_Store
+
+# design system page lives outside this repo (catalogue script edits a local copy)
+quebi-design-system.html

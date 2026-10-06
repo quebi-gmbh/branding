@@ -1,28 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- quebi · full lockup · DARK variant.
-     Knockout q badge (mint disc with q cut through) + mint "uebi".
-     Meant to be placed on a dark surface (#030712) so the knockout reveals it.
-     viewBox: 346 x 100. overflow="visible" so the b ascender doesn't clip.
+<!-- quebi · full lockup · DARK variant (quebi-wordmark-light).
+     gray-50 knockout q badge + gray-50 "uebi". Single ink.
+     Meant for dark grounds (#030712); the q cut-out reveals the ground.
+     Badge x=0..100, same q geometry as the standalone mark. The type is
+     fitted to the q: Outfit (variable) at wght 259.32 / 144.35 px makes the
+     u exactly as tall as the bowl's outer edge (y 15.5..84.5) with stems
+     exactly 9 (= q stroke). Values derive from scripts/outline.mjs →
+     lockupGeometry. viewBox starts at y=-18.86 so the b ascender isn't clipped.
 
-     Requires ./fonts/Outfit-Light.ttf OR outlining before export.
+     Requires ./fonts/Outfit-Variable.ttf OR outlining before export.
      See uebi-wordmark.svg for the font-face rationale. -->
 <svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 346 100" width="346" height="100"
-     overflow="visible">
+     viewBox="0 -18.86 377.44 118.86" width="377.44" height="118.86">
   <defs>
     <style type="text/css"><![CDATA[
       @font-face {
         font-family: "Outfit";
         font-style: normal;
-        font-weight: 300;
+        font-weight: 100 900;
         font-display: block;
-        src: url("./fonts/Outfit-Light.ttf") format("truetype");
+        src: url("./fonts/Outfit-Variable.ttf") format("truetype");
       }
       .uebi {
         font-family: "Outfit", "Inter", "Helvetica Neue", Arial, sans-serif;
-        font-weight: 300;
-        font-size: 115px;
-        dominant-baseline: middle;
+        font-weight: 259.32;
+        font-size: 144.35px;
         text-anchor: start;
       }
     ]]></style>
@@ -32,18 +34,19 @@
         <circle cx="50" cy="50" r="30"/>
         <line x1="80" y1="50" x2="80" y2="95"/>
       </g>
+      <!-- cut slot kept as disc material (white = keep) -->
       <rect x="10" y="45.5" width="80" height="9" fill="white"/>
     </mask>
   </defs>
 
   <!-- knockout q badge -->
-  <circle cx="50" cy="50" r="50" fill="#2dd4a8" mask="url(#q-knockout-mask-d)"/>
+  <circle cx="50" cy="50" r="50" fill="#f9fafb" mask="url(#q-knockout-mask-d)"/>
 
-  <!-- uebi wordmark in mint -->
-  <text class="uebi" y="50" fill="#2dd4a8">
-    <tspan x="106">u</tspan>
-    <tspan x="172">e</tspan>
-    <tspan x="238">b</tspan>
-    <tspan x="304">i</tspan>
+  <!-- uebi wordmark — baseline y=83.06, letter origins 107.22/190.08/272.93/355.79 -->
+  <text class="uebi" y="83.06" fill="#f9fafb">
+    <tspan x="107.22">u</tspan>
+    <tspan x="190.08">e</tspan>
+    <tspan x="272.93">b</tspan>
+    <tspan x="355.79">i</tspan>
   </text>
 </svg>

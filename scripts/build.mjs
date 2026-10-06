@@ -27,12 +27,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const SRC = join(ROOT, 'src');
 const DIST = join(ROOT, 'dist');
-const FONT_PATH = join(SRC, 'fonts/Outfit-Light.ttf');
-const FONT_URL = 'https://github.com/Outfitio/Outfit-Fonts/raw/main/fonts/ttf/Outfit-Light.ttf';
+// Variable font: the lockup outlines "uebi" at a fitted weight (see outline.mjs).
+const FONT_PATH = join(SRC, 'fonts/Outfit-Variable.ttf');
+const FONT_URL = 'https://github.com/Outfitio/Outfit-Fonts/raw/main/fonts/variable/Outfit%5Bwght%5D.ttf';
 
 const tokens = JSON.parse(readFileSync(join(SRC, 'tokens.json'), 'utf8'));
-const SURFACE_DARK = tokens.colors.surface;
-const PAPER = tokens.colors.paper;
+const INK = tokens.colors['ink-950'];
+const PAPER = tokens.colors.white;
+const SURFACE_DARK = INK;
+const VARIANTS = tokens.variants;
 const PNG_SIZES = tokens.exports.png_sizes_px;
 
 const manifest = [];
@@ -67,7 +70,7 @@ function track(p) {
 function downloadFont() {
   if (existsSync(FONT_PATH)) return Promise.resolve();
   ensureDir(dirname(FONT_PATH));
-  console.log(`↓ Downloading Outfit-Light.ttf`);
+  console.log(`↓ Downloading Outfit-Variable.ttf`);
   return new Promise((resolvePromise, reject) => {
     const follow = (url) => httpsGet(url, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -135,46 +138,29 @@ function strokeFor(size) {
   return STROKE_BUCKETS.find((b) => size <= b.maxSize).strokeWidth;
 }
 
-function qBadgeOpaqueSvg(sw) {
+// Both marks are the opaque construction: disc painted, q painted on top,
+// cut slot painted back in the disc colour. Only the two inks swap.
+function qBadgeSvg(variant, sw) {
+  const { disc_fill: disc, q_glyph_color: glyph } = VARIANTS[variant].mark;
   const cutY = (100 - sw) / 2;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120">
   <defs><clipPath id="disc-clip"><circle cx="50" cy="50" r="50"/></clipPath></defs>
-  <circle cx="50" cy="50" r="50" fill="#2dd4a8"/>
+  <circle cx="50" cy="50" r="50" fill="${disc}"/>
   <g clip-path="url(#disc-clip)">
-    <g stroke="#030712" stroke-width="${sw}" fill="none" stroke-linecap="round">
+    <g stroke="${glyph}" stroke-width="${sw}" fill="none" stroke-linecap="round">
       <circle cx="50" cy="50" r="30"/>
       <line x1="80" y1="50" x2="80" y2="95"/>
     </g>
-    <rect x="10" y="${cutY}" width="80" height="${sw}" fill="#2dd4a8"/>
+    <rect x="10" y="${cutY}" width="80" height="${sw}" fill="${disc}"/>
   </g>
 </svg>`;
-}
-function qBadgeKnockoutSvg(sw) {
-  const cutY = (100 - sw) / 2;
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120">
-  <defs>
-    <mask id="q-knockout-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
-      <rect x="0" y="0" width="100" height="100" fill="white"/>
-      <g stroke="black" stroke-width="${sw}" fill="none" stroke-linecap="round">
-        <circle cx="50" cy="50" r="30"/>
-        <line x1="80" y1="50" x2="80" y2="95"/>
-      </g>
-      <rect x="10" y="${cutY}" width="80" height="${sw}" fill="white"/>
-    </mask>
-  </defs>
-  <circle cx="50" cy="50" r="50" fill="#2dd4a8" mask="url(#q-knockout-mask)"/>
-</svg>`;
-}
-function qBadgeSvg(variant, sw) {
-  return variant === 'light' ? qBadgeOpaqueSvg(sw) : qBadgeKnockoutSvg(sw);
 }
 
 async function stageSvg(outlinedByName) {
   const targets = [
-    { name: 'q-light.svg', srcPath: join(SRC, 'q-badge-opaque.svg') },
-    { name: 'q-dark.svg', srcPath: join(SRC, 'q-badge-knockout.svg') },
+    { name: 'q-light.svg', srcPath: join(SRC, VARIANTS.light.mark.source) },
+    { name: 'q-dark.svg', srcPath: join(SRC, VARIANTS.dark.mark.source) },
     { name: 'lockup-light.svg', content: outlinedByName['lockup-light-outlined.svg'] },
     { name: 'lockup-dark.svg', content: outlinedByName['lockup-dark-outlined.svg'] },
   ];
@@ -217,14 +203,16 @@ async function stagePng(outlinedByName) {
     if (size < 180) continue;
     const llBuf = await rasterise(outlinedByName['lockup-light-outlined.svg'], size);
     const ldBuf = await rasterise(outlinedByName['lockup-dark-outlined.svg'], size);
-    const lh = Math.round((size * 100) / 346);
-    const padToSquare = async (buf, bg) => sharp({
-      create: { width: size, height: size, channels: 4, background: bg },
-    }).composite([{ input: buf, top: Math.round((size - lh) / 2), left: 0 }]).png().toBuffer();
+    const padToSquare = async (buf, bg) => {
+      const { height: lh } = await sharp(buf).metadata();
+      return sharp({
+        create: { width: size, height: size, channels: 4, background: bg },
+      }).composite([{ input: buf, top: Math.round((size - lh) / 2), left: 0 }]).png().toBuffer();
+    };
     const transparent = { r: 0, g: 0, b: 0, alpha: 0 };
     write(join(DIST, 'png', `lockup-light-${size}.png`), await padToSquare(llBuf, PAPER));
     // Knockout: keep the q cut-out transparent so whatever surface the asset
-    // lands on shows through. The mint disc + mint "uebi" are opaque paint.
+    // lands on shows through. The gray-50 disc + "uebi" are opaque paint.
     write(join(DIST, 'png', `lockup-dark-${size}.png`), await padToSquare(ldBuf, transparent));
   }
 }
@@ -233,18 +221,19 @@ async function stageFavicon() {
   // Each favicon size picks its own stroke bucket — small ones are thicker.
   const raster = (variant, size) => rasteriseSquare(qBadgeSvg(variant, strokeFor(size)), size);
 
-  const fav16 = await raster('dark', 16);
-  const fav32 = await raster('dark', 32);
-  const fav48 = await raster('dark', 48);
+  // Browser tabs are light by default: ink disc + white q reads on both.
+  const fav16 = await raster('light', 16);
+  const fav32 = await raster('light', 32);
+  const fav48 = await raster('light', 48);
   write(join(DIST, 'favicon', 'favicon-16.png'), fav16);
   write(join(DIST, 'favicon', 'favicon-32.png'), fav32);
 
   const ico = await pngToIco([fav16, fav32, fav48]);
   write(join(DIST, 'favicon', 'favicon.ico'), ico);
 
-  // apple-touch-icon: light variant on white squircle, 180x180, r=36.
+  // apple-touch-icon: light variant (ink disc) on white squircle, 180x180, r=36.
   const appleInner = await raster('light', Math.round(180 * 0.75));
-  const appleBg = await squircle(180, '#ffffff');
+  const appleBg = await squircle(180, PAPER);
   const apple = await sharp(appleBg).composite([{
     input: appleInner,
     top: Math.round((180 - 180 * 0.75) / 2),
@@ -252,7 +241,7 @@ async function stageFavicon() {
   }]).png().toBuffer();
   write(join(DIST, 'favicon', 'apple-touch-icon.png'), apple);
 
-  // android-chrome: dark variant on dark squircle.
+  // android-chrome: dark variant (gray-50 disc) on ink squircle.
   for (const size of [192, 512]) {
     const inner = await raster('dark', Math.round(size * 0.75));
     const bg = await squircle(size, SURFACE_DARK);
@@ -337,7 +326,7 @@ function renderShowcase() {
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --surface:#030712; --mint:#2dd4a8; --paper:#ffffff; --cream:#f1ede4;
+    --surface:#030712; --gray-50:#f9fafb; --paper:#ffffff;
     --ink:#111; --muted:#666; --line:#e7e7e3;
   }
   *{box-sizing:border-box}
@@ -346,7 +335,7 @@ function renderShowcase() {
   header{padding:56px 56px 32px;background:#fff;border-bottom:1px solid var(--line)}
   header h1{margin:0 0 8px;font-size:32px;font-weight:600;letter-spacing:-0.02em}
   header p{margin:6px 0;color:#444;max-width:760px;font-size:15px}
-  header .version{display:inline-block;margin-left:10px;padding:2px 10px;border-radius:999px;background:#030712;color:#2dd4a8;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:500;letter-spacing:0;vertical-align:middle}
+  header .version{display:inline-block;margin-left:10px;padding:2px 10px;border-radius:999px;background:#030712;color:#f9fafb;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:500;letter-spacing:0;vertical-align:middle}
   main{padding:16px 56px 96px;max-width:1400px;margin:0 auto}
   section{margin:56px 0}
   h2{margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600}
@@ -396,7 +385,7 @@ function renderShowcase() {
 <body>
 <header>
   <h1>quebi · brand assets <span class="version">${VERSION}</span></h1>
-  <p>Source SVGs, raster exports, and favicon bundle — generated from <code>src/</code> by <code>pnpm run build</code>. Two pinned variants, two colours: <code>#030712</code> and <code>#2dd4a8</code>.</p>
+  <p>Source SVGs, raster exports, and favicon bundle — generated from <code>src/</code> by <code>pnpm run build</code>. Ink &amp; Paper: two pinned variants, no accent colour — <code>#030712</code> (ink-950), <code>#f9fafb</code> (gray-50) and <code>#ffffff</code> (white).</p>
 </header>
 <main>
 
@@ -405,11 +394,11 @@ function renderShowcase() {
   <div class="hero">
     <div>
       <div class="stage light"><img src="svg/lockup-light-outlined.svg" alt="lockup light"></div>
-      <div class="meta"><b>Light · opaque</b>Mint disc with a black “q” painted on top; “uebi” in black. Use on white paper and light surfaces. Safe for single-ink print (black plate + mint spot).</div>
+      <div class="meta"><b>Light · ink</b>Single ink (<code>ink-950</code>): knockout disc with the “q” cut through to the ground, “uebi” in ink. Use on white paper and any light ground. Prints with a single black plate.</div>
     </div>
     <div>
       <div class="stage dark"><img src="svg/lockup-dark-outlined.svg" alt="lockup dark"></div>
-      <div class="meta"><b>Dark · knockout</b>Mint disc with the “q” cut through to the surface; “uebi” in mint. Use on dark surfaces — the knockout lets photographic or patterned backgrounds show through the q.</div>
+      <div class="meta"><b>Dark · light ink</b>Single ink (<code>gray-50</code>): knockout disc with the “q” cut through to the surface, “uebi” in gray-50. Use on dark grounds — the knockout lets photographic or patterned backgrounds show through the q.</div>
     </div>
   </div>
 </section>
@@ -419,27 +408,25 @@ function renderShowcase() {
   <table class="rules">
     <thead><tr><th>Token</th><th>Hex</th><th>Role</th></tr></thead>
     <tbody>
-      <tr><td><code>surface</code></td><td><span class="chip"><i style="background:#030712"></i>#030712</span></td><td>Dark surface + ink on light variant</td></tr>
-      <tr><td><code>mint</code></td><td><span class="chip"><i style="background:#2dd4a8"></i>#2dd4a8</span></td><td>Disc + wordmark on dark variant</td></tr>
-      <tr><td><code>paper</code></td><td><span class="chip"><i style="background:#ffffff"></i>#ffffff</span></td><td>Light surface background</td></tr>
+      <tr><td><code>ink-950</code></td><td><span class="chip"><i style="background:#030712"></i>#030712</span></td><td>Light-variant ink (lockup, mark disc); dark surface; q on the dark mark</td></tr>
+      <tr><td><code>gray-50</code></td><td><span class="chip"><i style="background:#f9fafb"></i>#f9fafb</span></td><td>Dark-variant ink (lockup, mark disc)</td></tr>
+      <tr><td><code>white</code></td><td><span class="chip"><i style="background:#ffffff"></i>#ffffff</span></td><td>Light surface; q on the light mark</td></tr>
     </tbody>
   </table>
 </section>
 
 <section>
   <h2>Master grid</h2>
-  <p>Badge lives in a 100×100 SVG box; lockup is 346×100. All dimensions are in SVG user units.</p>
+  <p>Badge lives in a 100×100 SVG box; the lockup's disc uses the same box, with the wordmark to its right. All dimensions are in SVG user units.</p>
   <table class="rules">
     <tbody>
       <tr><td><b>disc</b></td><td>circle r=50 centred at (50,50)</td></tr>
-      <tr><td><b>bowl</b></td><td>circle r=30 centred at (50,50), stroke weight 9</td></tr>
-      <tr><td><b>descender</b></td><td>(80,50) → (80,95), stroke 9, round cap</td></tr>
-      <tr><td><b>cut slot</b></td><td>x=10, y=45.5, w=80, h=9 (matches stroke)</td></tr>
-      <tr><td><b>wordmark</b></td><td>Outfit Light (300), font-size 115, dominant-baseline middle anchored to y=50</td></tr>
-      <tr><td><b>letter x-origins</b></td><td>0 / 66 / 132 / 198 (wordmark) · 106 / 172 / 238 / 304 (lockup)</td></tr>
+      <tr><td><b>q (mark and lockup)</b></td><td>bowl r=30, stroke 9; descender (80,50) → (80,95), round cap; cut slot y=45.5, h=9</td></tr>
+      <tr><td><b>lockup · wordmark</b></td><td>Outfit variable at wght 259.32, font-size 144.35: the u is exactly as tall as the bowl’s outer edge (15.5 → 84.5) and its stems are exactly 9; baseline y=83.06</td></tr>
+      <tr><td><b>lockup · e crossbar</b></td><td>y=44.95 → 52.60, just inside the top of the cut slot</td></tr>
     </tbody>
   </table>
-  <p>The q’s cut slot and the e’s crossbar are mathematically colinear at y=50 — that’s the hinge that binds the whole mark together. The “e” carries no cut band because its own crossbar already reads as the cut.</p>
+  <p>In the lockup, the type is fitted to the q: same height as the bowl, same stroke as the q. The build derives the weight and size from the Outfit variable font (<code>scripts/outline.mjs → lockupGeometry</code>).</p>
 </section>
 
 <section>
@@ -447,15 +434,16 @@ function renderShowcase() {
   <div class="dos">
     <div class="do"><b>Do</b>
       <ul>
-        <li>Use the <b>light</b> variant on white/cream surfaces and single-ink prints.</li>
-        <li>Use the <b>dark</b> variant on dark, busy, or photographic surfaces — the knockout reveals the surface through the q.</li>
+        <li>Use the <b>light</b> (ink) variant on white and light surfaces and single-ink prints.</li>
+        <li>Use the <b>dark</b> (gray-50) variant on dark, busy, or photographic surfaces.</li>
+        <li>Keep clear space of at least the height of the q around the logo.</li>
         <li>For app icons, use the squircle-wrapped variants from <code>favicon/</code>.</li>
         <li>For embedding or third-party handoff, prefer <code>lockup-*.outlined.svg</code> — no font dependency.</li>
       </ul>
     </div>
     <div class="dont"><b>Don’t</b>
       <ul>
-        <li>Recolour, tint, gradient, or outline the marks. Two colours, full stop.</li>
+        <li>Recolour, tint, gradient, or outline the marks. Mint/teal is retired — ink and paper only.</li>
         <li>Place light on dark or dark on light — the wordmark will vanish.</li>
         <li>Shrink the lockup below 180 px — wordmark loses legibility. Use the badge alone instead.</li>
         <li>Substitute a different sans-serif for Outfit — the e/q geometry stops aligning.</li>
@@ -466,7 +454,7 @@ function renderShowcase() {
 
 <section>
   <h2>Typography</h2>
-  <p>Wordmark is set in <b>Outfit Light (300)</b>, by <a href="https://fonts.google.com/specimen/Outfit" target="_blank">Rodrigo Fuenzalida & Outfitio</a>, SIL OFL 1.1. The build script downloads the TTF automatically and outlines the text into <code>&lt;path&gt;</code> data, so shipped assets have no font dependency. Human-editable source SVGs keep live <code>&lt;text&gt;</code> and reference the font via <code>@font-face</code>.</p>
+  <p>Wordmark is set in <b>Outfit</b> at a fitted weight (≈259, between ExtraLight and Light) so the u matches the q’s height and stroke, by <a href="https://fonts.google.com/specimen/Outfit" target="_blank">Rodrigo Fuenzalida & Outfitio</a>, SIL OFL 1.1. The build script downloads the TTF automatically and outlines the text into <code>&lt;path&gt;</code> data, so shipped assets have no font dependency. Human-editable source SVGs keep live <code>&lt;text&gt;</code> and reference the font via <code>@font-face</code>.</p>
 </section>
 
 <section>
@@ -490,7 +478,7 @@ function renderShowcase() {
 
 <section>
   <h2>PNG · q light · transparent</h2>
-  <p>Default — mint disc + black q on transparent.</p>
+  <p>Default — ink disc + white q on transparent. App icons and avatars on light grounds.</p>
   <div class="grid">${qLightTransparent}</div>
 </section>
 
@@ -502,25 +490,25 @@ function renderShowcase() {
 
 <section>
   <h2>PNG · q light · on dark background</h2>
-  <p>Pre-composited on surface (<code>#030712</code>). Note: the black q disappears into the dark surface — for dark backgrounds, prefer the dark (knockout) variant.</p>
+  <p>Pre-composited on surface (<code>#030712</code>). Note: the ink disc disappears into the dark surface — for dark backgrounds, prefer the dark variant.</p>
   <div class="grid">${qLightOnDark}</div>
 </section>
 
 <section>
-  <h2>PNG · q dark (knockout) · transparent</h2>
-  <p>Default — mint disc with the q cut through to whatever surface the asset is placed on.</p>
+  <h2>PNG · q dark · transparent</h2>
+  <p>Default — gray-50 disc + ink q on transparent. App icons and avatars on dark grounds.</p>
   <div class="grid">${qDarkTransparent}</div>
 </section>
 
 <section>
   <h2>PNG · q dark · on light background</h2>
-  <p>Pre-composited on paper — the knockout reveals white.</p>
+  <p>Pre-composited on paper (<code>#ffffff</code>). Note: the gray-50 disc barely separates from white — for light backgrounds, prefer the light variant.</p>
   <div class="grid">${qDarkOnLight}</div>
 </section>
 
 <section>
   <h2>PNG · q dark · on dark background</h2>
-  <p>Pre-composited on surface (<code>#030712</code>) — the knockout reveals the surface.</p>
+  <p>Pre-composited on surface (<code>#030712</code>).</p>
   <div class="grid">${qDarkOnDark}</div>
 </section>
 
@@ -536,7 +524,7 @@ function renderShowcase() {
 
 <section>
   <h2>Favicon & app icons</h2>
-  <p>Drop-in bundle for web and mobile: multi-resolution ICO (16/32/48), dedicated PNGs, 180×180 apple-touch-icon (light q on white squircle), 192/512 android-chrome (dark q on dark squircle), and a minimal <code>site.webmanifest</code>.</p>
+  <p>Drop-in bundle for web and mobile: multi-resolution ICO (16/32/48), dedicated PNGs, 180×180 apple-touch-icon (ink q mark on white squircle), 192/512 android-chrome (gray-50 q mark on ink squircle), and a minimal <code>site.webmanifest</code>. The favicon uses the ink mark, which reads on light and dark tabs alike.</p>
   <div class="grid">${favicons}</div>
 </section>
 
@@ -558,16 +546,20 @@ function stageHtml() {
 }
 
 async function validate() {
-  // Sanity: centre pixel of q-light-256 is near-black (the q glyph).
+  // Sanity: in q-light-256 the disc is ink and the q glyph is white.
   const buf = readFileSync(join(DIST, 'png', 'q-light-256.png'));
   const { data, info } = await sharp(buf).raw().toBuffer({ resolveWithObject: true });
-  // Top of the bowl: SVG (50, 20) inside a 120-unit viewBox at (-10,-10).
-  // That maps to (50 - -10)/120 = 50% x, (20 - -10)/120 = 25% y of output.
-  const idx = (Math.round(info.height * 0.25) * info.width + Math.floor(info.width / 2)) * info.channels;
-  const [r, g, b] = [data[idx], data[idx + 1], data[idx + 2]];
-  const dark = r < 40 && g < 40 && b < 40;
-  if (!dark) throw new Error(`Validation: q-light-256 centre pixel is ${r},${g},${b} — expected near-black`);
-  console.log(`✓ centre pixel sanity: q-light-256 = #${[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('')}`);
+  // SVG (x, y) inside a 120-unit viewBox at (-10,-10) → fraction (x+10)/120.
+  const px = (x, y) => {
+    const i = (Math.round(info.height * (y + 10) / 120) * info.width + Math.round(info.width * (x + 10) / 120)) * info.channels;
+    return [data[i], data[i + 1], data[i + 2]];
+  };
+  const hex = (c) => '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('');
+  const glyph = px(50, 20); // top of the bowl
+  const disc = px(50, 50);  // centre, inside the bowl
+  if (!glyph.every((v) => v > 215)) throw new Error(`Validation: q-light-256 glyph pixel is ${hex(glyph)} — expected near-white`);
+  if (!disc.every((v) => v < 40)) throw new Error(`Validation: q-light-256 disc pixel is ${hex(disc)} — expected near-ink`);
+  console.log(`✓ pixel sanity: q-light-256 glyph = ${hex(glyph)}, disc = ${hex(disc)}`);
 }
 
 // ────────────────────── main ──────────────────────
@@ -581,8 +573,8 @@ async function main() {
 
   const font = loadFont(FONT_PATH);
   const outlined = {
-    'lockup-light-outlined.svg': outlineLockup(font, 'light'),
-    'lockup-dark-outlined.svg': outlineLockup(font, 'dark'),
+    'lockup-light-outlined.svg': outlineLockup(font, VARIANTS.light.lockup.ink),
+    'lockup-dark-outlined.svg': outlineLockup(font, VARIANTS.dark.lockup.ink),
   };
   // Persist outlined intermediates for debugging / third-party use.
   for (const [name, content] of Object.entries(outlined)) {

@@ -4,7 +4,7 @@
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -16,7 +16,7 @@ const OUT = join(ROOT, `quebi-branding-${VERSION}.zip`);
 if (!existsSync(DIST)) { console.error('dist not found — run build first'); process.exit(1); }
 
 const output = createWriteStream(OUT);
-const archive = archiver('zip', { zlib: { level: 9 } });
+const archive = new ZipArchive({ zlib: { level: 9 } });
 output.on('close', () => console.log(`✓ ${OUT} (${archive.pointer()} bytes)`));
 archive.on('error', (e) => { throw e; });
 archive.pipe(output);
