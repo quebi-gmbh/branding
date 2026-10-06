@@ -26,6 +26,7 @@ pnpm install
 pnpm run build              # populates dist/
 pnpm run build:clean        # wipes dist/ first
 pnpm run package            # build + zip → quebi-branding.zip
+pnpm run catalogue          # build + embed every PNG into quebi-design-system.html
 ```
 
 First run downloads the Outfit variable font (SIL OFL) into
