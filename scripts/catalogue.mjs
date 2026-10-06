@@ -98,6 +98,35 @@ if (block.test(html)) {
   html = `${html.slice(0, end)}\n\n${section}${html.slice(end)}`;
 }
 
+// The page's own four logo files (logos section, plus the Logo/NavBar/Stage
+// previews that embed the same images) are swapped for renders of the
+// build's vector sources: transparent and cropped tight, unlike the padded
+// release PNGs. Each is found by its alt name in the logos section, then
+// every copy of that payload in the page is replaced.
+const { Resvg } = await import('@resvg/resvg-js');
+const svgSrc = (name) => readFileSync(join(DIST, 'svg', name), 'utf8');
+const tightMark = (name) => svgSrc(name)
+  .replace(/viewBox="[^"]+"/, 'viewBox="0 0 100 100"')
+  .replace(/width="[^"]+" height="[^"]+"/, 'width="100" height="100"');
+const render = (svg, fit) => new Resvg(svg, { fitTo: fit, background: 'rgba(0,0,0,0)' }).render().asPng();
+const pageLogos = {
+  'quebi-wordmark-ink.png': render(svgSrc('lockup-light-outlined.svg'), { mode: 'height', value: 240 }),
+  'quebi-wordmark-light.png': render(svgSrc('lockup-dark-outlined.svg'), { mode: 'height', value: 240 }),
+  'quebi-mark-ink.png': render(tightMark('q-light.svg'), { mode: 'width', value: 320 }),
+  'quebi-mark-light.png': render(tightMark('q-dark.svg'), { mode: 'width', value: 320 }),
+};
+const dims = {};
+for (const [alt, png] of Object.entries(pageLogos)) {
+  const m = html.match(new RegExp(`<img src="data:image/png;base64,([^"]+)" alt="${alt.replace('.', '\\.')}"`));
+  if (!m) throw new Error(`logo ${alt} not found in logos section`);
+  const { width, height } = await sharp(png).metadata();
+  dims[alt] = `${width} × ${height}`;
+  html = html.split(m[1]).join(png.toString('base64'));
+}
+const provenance = `These are rasters (${dims['quebi-wordmark-ink.png']} and ${dims['quebi-mark-ink.png']} px) rendered by the branding build from its vector sources (<code>lockup-*-outlined.svg</code>, <code>q-*.svg</code>); the SVGs and every size are in the release zip and the logo catalogue below.</p>`;
+if (!/These are rasters \(.*?<\/p>/.test(html)) throw new Error('logos provenance sentence not found');
+html = html.replace(/These are rasters \(.*?<\/p>/, () => provenance);
+
 const navLink = '<!-- catalogue:nav --><a href="#catalogue">logo catalogue</a>';
 if (!html.includes('<!-- catalogue:nav -->')) {
   const logosLink = '<a href="#logos">logos</a>';
