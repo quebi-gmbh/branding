@@ -11,7 +11,7 @@ produces them.
 ├── dist/                        ← generated artefacts (git-ignored)
 ├── scripts/
 │   ├── build.mjs                ← pipeline: outline text → SVG + PNG + ICO
-│   ├── outline.mjs              ← Outfit-Light TTF → SVG <path> data
+│   ├── outline.mjs              ← Outfit variable TTF → SVG <path> data
 │   ├── package.mjs              ← zips dist/ for release
 │   └── test.mjs                 ← validates dist/ (manifest hashes, coverage)
 └── .github/
@@ -28,7 +28,8 @@ pnpm run build:clean        # wipes dist/ first
 pnpm run package            # build + zip → quebi-branding.zip
 ```
 
-First run downloads `Outfit-Light.ttf` (SIL OFL) into `src/fonts/`.
+First run downloads the Outfit variable font (SIL OFL) into
+`src/fonts/Outfit-Variable.ttf`.
 The build outlines the `<text>` in the lockup/wordmark SVGs into `<path>`
 data so all rasterisation is font-independent and byte-reproducible.
 
@@ -102,31 +103,30 @@ in `src/` carry and what gets copied into `dist/svg/`.
 All values in SVG user units (badge is a 100×100 box; the lockup's disc
 uses the same box).
 
-**Mark** (`q-*`, standalone):
+Both the mark (`q-*`) and the lockup (`lockup-*`) use the same q:
 
 - **disc**: circle r=50 centred at (50,50)
 - **bowl**: circle r=30 centred at (50,50), stroke weight 9
 - **descender**: line (80,50) → (80,95), stroke 9, `stroke-linecap="round"`
 - **cut slot**: rect x=10 y=45.5 w=80 h=9 (height matches stroke weight)
 
-**Lockup** (`lockup-*`): the q is fitted to the type. The build derives
-these values from the Outfit Light outlines (`scripts/outline.mjs →
-lockupGeometry`); the numbers below are what it produces.
+**Lockup**: the type is fitted to the q. The build derives these values
+from the Outfit variable font (`scripts/outline.mjs → lockupGeometry`); the
+numbers below are what it produces.
 
-- **wordmark**: Outfit Light (300) at `font-size` 127.66, so the u/b/i
-  stems (70.5 font units) are exactly 9 thick, the same as the q stroke.
-  Baseline at y=79.36, which puts the u's ink centre on y=50.
-- **bowl**: circle r=26.14, stroke 9. Its outer edge spans y=19.36 → 80.64,
-  exactly the u's flat top and round bottom.
-- **cut slot**: rect x=10 y=45.02 w=80 h=7.66, exactly the e's crossbar band.
-- **descender**: line (76.14,50) → (76.14,100), stroke 9, cut out through
-  the disc edge.
-- **letter x-origins**: 105.27 / 178.55 / 251.82 / 325.10 (pitch 0.574 em;
-  12.8 gap from the disc to the u's ink).
-- **viewBox**: `0 -11.02 344.89 111.02`. It starts above the disc so the b
+- **wordmark**: Outfit at **wght 259.32**, `font-size` 144.35. That's the
+  only weight/size pair where the u is exactly as tall as the bowl's outer
+  edge (y=15.5 → 84.5: flat top to round bottom) *and* its stems are exactly
+  9, the q's stroke. Baseline at y=83.06, which puts the u's ink centre on
+  y=50.
+- **e crossbar**: lands at y=44.95 → 52.60 (7.65 thick), just inside the top
+  of the q's cut slot (45.5 → 54.5).
+- **letter x-origins**: 107.22 / 190.08 / 272.93 / 355.79 (pitch 0.574 em;
+  0.111 em gap from the disc to the u's ink).
+- **viewBox**: `0 -18.86 377.44 118.86`. It starts above the disc so the b
   ascender isn't clipped.
 
-The "e" carries no cut band; its crossbar continues the q's cut slot.
+The "e" carries no cut band; its crossbar echoes the q's cut slot.
 
 ## Construction notes
 
@@ -155,8 +155,9 @@ The "e" carries no cut band; its crossbar continues the q's cut slot.
 
 ## Font
 
-Outfit (Google Fonts, SIL OFL 1.1). The build downloads `Outfit-Light.ttf`
-automatically and outlines the `<text>` into `<path>` data, so shipped
+Outfit (Google Fonts, SIL OFL 1.1), variable font. The build downloads
+`Outfit-Variable.ttf` automatically, picks the weight that fits the q (see
+Master grid), and outlines the `<text>` into `<path>` data, so shipped
 assets have no font dependency. Human-editable source SVGs keep live
 `<text>` and reference the font via `@font-face` for authoring.
 

@@ -27,8 +27,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const SRC = join(ROOT, 'src');
 const DIST = join(ROOT, 'dist');
-const FONT_PATH = join(SRC, 'fonts/Outfit-Light.ttf');
-const FONT_URL = 'https://github.com/Outfitio/Outfit-Fonts/raw/main/fonts/ttf/Outfit-Light.ttf';
+// Variable font: the lockup outlines "uebi" at a fitted weight (see outline.mjs).
+const FONT_PATH = join(SRC, 'fonts/Outfit-Variable.ttf');
+const FONT_URL = 'https://github.com/Outfitio/Outfit-Fonts/raw/main/fonts/variable/Outfit%5Bwght%5D.ttf';
 
 const tokens = JSON.parse(readFileSync(join(SRC, 'tokens.json'), 'utf8'));
 const INK = tokens.colors['ink-950'];
@@ -69,7 +70,7 @@ function track(p) {
 function downloadFont() {
   if (existsSync(FONT_PATH)) return Promise.resolve();
   ensureDir(dirname(FONT_PATH));
-  console.log(`↓ Downloading Outfit-Light.ttf`);
+  console.log(`↓ Downloading Outfit-Variable.ttf`);
   return new Promise((resolvePromise, reject) => {
     const follow = (url) => httpsGet(url, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -420,14 +421,12 @@ function renderShowcase() {
   <table class="rules">
     <tbody>
       <tr><td><b>disc</b></td><td>circle r=50 centred at (50,50)</td></tr>
-      <tr><td><b>mark · bowl</b></td><td>circle r=30, stroke 9; descender (80,50) → (80,95), round cap; cut slot y=45.5, h=9</td></tr>
-      <tr><td><b>lockup · wordmark</b></td><td>Outfit Light (300) at font-size 127.66, so the u/b/i stems are exactly 9 wide; baseline y=79.36</td></tr>
-      <tr><td><b>lockup · bowl</b></td><td>circle r=26.14, stroke 9: outer edge y=19.36 → 80.64, exactly the u's flat top and round bottom</td></tr>
-      <tr><td><b>lockup · cut slot</b></td><td>y=45.02, h=7.66: exactly the e's crossbar</td></tr>
-      <tr><td><b>lockup · descender</b></td><td>x=76.14 (on the bowl), stroke 9, cut out through the disc edge</td></tr>
+      <tr><td><b>q (mark and lockup)</b></td><td>bowl r=30, stroke 9; descender (80,50) → (80,95), round cap; cut slot y=45.5, h=9</td></tr>
+      <tr><td><b>lockup · wordmark</b></td><td>Outfit variable at wght 259.32, font-size 144.35: the u is exactly as tall as the bowl’s outer edge (15.5 → 84.5) and its stems are exactly 9; baseline y=83.06</td></tr>
+      <tr><td><b>lockup · e crossbar</b></td><td>y=44.95 → 52.60, just inside the top of the cut slot</td></tr>
     </tbody>
   </table>
-  <p>In the lockup, the q is fitted to the type: same stroke as the u, same height as the u, and the cut slot is the e’s crossbar continued. The build derives these values from the Outfit Light outlines (<code>scripts/outline.mjs → lockupGeometry</code>).</p>
+  <p>In the lockup, the type is fitted to the q: same height as the bowl, same stroke as the q. The build derives the weight and size from the Outfit variable font (<code>scripts/outline.mjs → lockupGeometry</code>).</p>
 </section>
 
 <section>
@@ -455,7 +454,7 @@ function renderShowcase() {
 
 <section>
   <h2>Typography</h2>
-  <p>Wordmark is set in <b>Outfit Light (300)</b>, by <a href="https://fonts.google.com/specimen/Outfit" target="_blank">Rodrigo Fuenzalida & Outfitio</a>, SIL OFL 1.1. The build script downloads the TTF automatically and outlines the text into <code>&lt;path&gt;</code> data, so shipped assets have no font dependency. Human-editable source SVGs keep live <code>&lt;text&gt;</code> and reference the font via <code>@font-face</code>.</p>
+  <p>Wordmark is set in <b>Outfit</b> at a fitted weight (≈259, between ExtraLight and Light) so the u matches the q’s height and stroke, by <a href="https://fonts.google.com/specimen/Outfit" target="_blank">Rodrigo Fuenzalida & Outfitio</a>, SIL OFL 1.1. The build script downloads the TTF automatically and outlines the text into <code>&lt;path&gt;</code> data, so shipped assets have no font dependency. Human-editable source SVGs keep live <code>&lt;text&gt;</code> and reference the font via <code>@font-face</code>.</p>
 </section>
 
 <section>

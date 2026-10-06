@@ -1,53 +1,79 @@
 // Replace <text> in the three text-bearing SVGs with <path> data using the
-// Outfit-Light TTF. Produces *-outlined.svg in the output dir so every
+// Outfit variable TTF. Produces *-outlined.svg in the output dir so every
 // downstream rasteriser is font-independent.
 import { readFileSync, writeFileSync } from 'node:fs';
 import opentype from 'opentype.js';
 
-// The q's stroke weight in the lockup (badge box is 100×100).
-const STROKE = 9;
-// Outfit Light's u/b/i stems are 70–71 font units wide (upem 1000). The font
-// size is chosen so these stems come out exactly STROKE thick.
-const STEM_UNITS = 70.5;
-// Outfit Light's e crossbar spans y=209..269 font units. The q's cut slot is
-// set to exactly this band so the two read as one line.
-const E_BAR = [209, 269];
-// Letter pitch (origin to origin) in em, and the gap from the disc edge to the
-// u's left ink edge in badge units. Carried over from the original lockup.
+// The lockup's q is fixed: the same geometry as the standalone mark (disc
+// r=50, bowl r=30, stroke 9, cut slot 45.5..54.5, descender at x=80). The
+// type is fitted to it.
+const Q = { r: 30, stroke: 9, cutY: 45.5, cutHeight: 9, descenderX: 80 };
+const Q_HEIGHT = 2 * Q.r + Q.stroke; // outer edge of the bowl: 15.5..84.5
+// Letter pitch (origin to origin) and the gap from the disc edge to the u's
+// left ink edge, both in em. Carried over from the original lockup.
 const PITCH_EM = 0.574;
-const GAP = 12.8;
+const GAP_EM = 0.111;
 
 export function loadFont(fontPath) {
   const buf = readFileSync(fontPath);
   return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
 }
 
-// Everything the lockup's q has to agree with is derived from the font here:
-// - the u's stems set the font size (stem = q stroke),
-// - the u's ink box (flat top at x-height, round bottom with overshoot) sets
-//   the q ring: its outer edge touches exactly the u's top and bottom,
-// - the u's ink centre sits on the ring centre (y=50),
-// - the e's crossbar sets the cut slot.
+// The u at 1 unit per font unit, y up: ink box and stem width. The stems'
+// flat tops are the horizontal segments at the x-height.
+function measureU(font) {
+  const p = font.getPath('u', 0, 0, font.unitsPerEm);
+  const b = p.getBoundingBox();
+  const top = -b.y1;
+  const xs = p.commands.filter((c) => c.x !== undefined && Math.abs(-c.y - top) < 0.5)
+    .map((c) => c.x).sort((a, c) => a - c);
+  return { top, bottom: -b.y2, left: b.x1, stem: xs[1] - xs[0] };
+}
+
+// Outfit is a variable font (wght 100..900). Pick the weight at which the u,
+// scaled to the q's height, has stems exactly the q's stroke: the u's stem
+// to height ratio grows monotonically with weight, so bisect.
+function fitWeight(font) {
+  const target = Q.stroke / Q_HEIGHT;
+  const ratio = (w) => {
+    font.variation.set({ wght: w });
+    const u = measureU(font);
+    return u.stem / (u.top - u.bottom);
+  };
+  let lo = 100, hi = 900;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (ratio(mid) < target) lo = mid; else hi = mid;
+  }
+  const wght = Math.round(((lo + hi) / 2) * 100) / 100;
+  font.variation.set({ wght });
+  return wght;
+}
+
+// Everything is derived from the font here:
+// - the weight, so the u's stems equal the q's stroke at the q's height,
+// - the font size, so the u's ink (flat top at x-height, round bottom with
+//   overshoot) spans exactly the bowl's outer edge, 15.5..84.5,
+// - the baseline, so the u's ink centre sits on the bowl centre (y=50).
+// Leaves the font set to the fitted weight for the getPath() calls after it.
 export function lockupGeometry(font) {
   const upem = font.unitsPerEm;
-  const fontSize = (STROKE * upem) / STEM_UNITS;
-  const s = fontSize / upem;
-  const u = font.charToGlyph('u').getBoundingBox();
-  const outerR = ((u.y2 - u.y1) * s) / 2;
-  const baseline = 50 + ((u.y1 + u.y2) / 2) * s;
-  const cut = { y: baseline - E_BAR[1] * s, height: (E_BAR[1] - E_BAR[0]) * s };
+  const wght = fitWeight(font);
+  const u = measureU(font);
+  const s = Q_HEIGHT / (u.top - u.bottom);
+  const fontSize = s * upem;
+  const baseline = 50 + ((u.top + u.bottom) / 2) * s;
 
-  const uX = 100 + GAP - u.x1 * s;
+  const uX = 100 + GAP_EM * fontSize - u.left * s;
   const letters = [...'uebi'].map((char, i) => ({ char, x: uX + i * PITCH_EM * fontSize }));
 
-  const glyphs = letters.map(({ char }) => font.charToGlyph(char).getBoundingBox());
-  const top = Math.min(0, baseline - Math.max(...glyphs.map((b) => b.y2)) * s);
-  const right = letters.at(-1).x + glyphs.at(-1).x2 * s;
+  const boxes = letters.map(({ char, x }) => font.getPath(char, x, baseline, fontSize).getBoundingBox());
+  const top = Math.min(0, ...boxes.map((b) => b.y1));
+  const right = Math.max(...boxes.map((b) => b.x2));
 
   return {
-    fontSize, baseline, letters, cut,
-    stroke: STROKE,
-    r: outerR - STROKE / 2,
+    wght, fontSize, baseline, letters,
+    q: Q,
     viewBox: { x: 0, y: top, width: right, height: 100 - top },
   };
 }
@@ -97,14 +123,15 @@ ${letterPaths(font, letters, g.baseline, g.fontSize, fill)}
 export function outlineLockup(font, ink) {
   const g = lockupGeometry(font);
   const { x, y, width, height } = g.viewBox;
+  const { q } = g;
   const defs = `  <defs>
     <mask id="q-knockout-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
       <rect x="0" y="0" width="100" height="100" fill="white"/>
-      <g stroke="black" stroke-width="${g.stroke}" fill="none" stroke-linecap="round">
-        <circle cx="50" cy="50" r="${r2(g.r)}"/>
-        <line x1="${r2(50 + g.r)}" y1="50" x2="${r2(50 + g.r)}" y2="100"/>
+      <g stroke="black" stroke-width="${q.stroke}" fill="none" stroke-linecap="round">
+        <circle cx="50" cy="50" r="${q.r}"/>
+        <line x1="${q.descenderX}" y1="50" x2="${q.descenderX}" y2="95"/>
       </g>
-      <rect x="10" y="${r2(g.cut.y)}" width="80" height="${r2(g.cut.height)}" fill="white"/>
+      <rect x="10" y="${q.cutY}" width="80" height="${q.cutHeight}" fill="white"/>
     </mask>
   </defs>`;
   const badge = `  <g>
