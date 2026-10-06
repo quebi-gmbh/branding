@@ -8,6 +8,7 @@
     "build:clean": "node scripts/build.mjs --clean",
     "package": "node scripts/build.mjs --clean && node scripts/package.mjs",
     "test": "node scripts/test.mjs",
+    "catalogue": "node scripts/build.mjs --clean && node scripts/catalogue.mjs",
     "verify": "pnpm run build:clean && node scripts/package.mjs && node scripts/test.mjs"
   },
   "keywords": ["quebi", "branding", "logo"],
