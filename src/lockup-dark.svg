@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- quebi · full lockup · DARK variant.
-     Knockout q badge (mint disc with q cut through) + mint "uebi".
-     Meant to be placed on a dark surface (#030712) so the knockout reveals it.
+<!-- quebi · full lockup · DARK variant (quebi-wordmark-light).
+     gray-50 knockout q badge + gray-50 "uebi". Single ink.
+     Meant for dark grounds (#030712); the q cut-out reveals the ground.
+     Badge x=0..100; wordmark x=106..304 (letter-origins inside its own frame).
      viewBox: 346 x 100. overflow="visible" so the b ascender doesn't clip.
 
      Requires ./fonts/Outfit-Light.ttf OR outlining before export.
@@ -32,15 +33,16 @@
         <circle cx="50" cy="50" r="30"/>
         <line x1="80" y1="50" x2="80" y2="95"/>
       </g>
+      <!-- cut slot kept as disc material (white = keep) -->
       <rect x="10" y="45.5" width="80" height="9" fill="white"/>
     </mask>
   </defs>
 
   <!-- knockout q badge -->
-  <circle cx="50" cy="50" r="50" fill="#2dd4a8" mask="url(#q-knockout-mask-d)"/>
+  <circle cx="50" cy="50" r="50" fill="#f9fafb" mask="url(#q-knockout-mask-d)"/>
 
-  <!-- uebi wordmark in mint -->
-  <text class="uebi" y="50" fill="#2dd4a8">
+  <!-- uebi wordmark — letters offset to 106/172/238/304 -->
+  <text class="uebi" y="50" fill="#f9fafb">
     <tspan x="106">u</tspan>
     <tspan x="172">e</tspan>
     <tspan x="238">b</tspan>

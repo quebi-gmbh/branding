@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- quebi · q mark · LIGHT variant (quebi-mark-ink).
+     For light grounds: ink-950 disc with a white q painted on top.
+     Descender is clipped to the disc circle so the tail cannot protrude. -->
+<!-- viewBox extends 10 units beyond the mark on every side = 10% safe-area padding. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120">
+  <defs>
+    <clipPath id="disc-clip">
+      <circle cx="50" cy="50" r="50"/>
+    </clipPath>
+  </defs>
+  <!-- disc -->
+  <circle cx="50" cy="50" r="50" fill="#030712"/>
+  <!-- q + cut, clipped inside the disc -->
+  <g clip-path="url(#disc-clip)">
+    <g stroke="#ffffff" stroke-width="9" fill="none" stroke-linecap="round">
+      <circle cx="50" cy="50" r="30"/>
+      <line x1="80" y1="50" x2="80" y2="95"/>
+    </g>
+    <!-- horizontal cut slot, painted in the disc colour -->
+    <rect x="10" y="45.5" width="80" height="9" fill="#030712"/>
+  </g>
+</svg>

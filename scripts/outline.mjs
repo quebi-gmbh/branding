@@ -45,7 +45,9 @@ ${letterPaths(font, letters, baselineY, fill)}
 `;
 }
 
-export function outlineLockup(font, variant) {
+// Both lockup variants share one construction: a single-ink knockout disc
+// (q cut through to the ground) next to "uebi" in the same ink.
+export function outlineLockup(font, ink) {
   const baselineY = baselineFor(font, 50);
   const letters = [
     { char: 'u', x: 106 },
@@ -53,28 +55,7 @@ export function outlineLockup(font, variant) {
     { char: 'b', x: 238 },
     { char: 'i', x: 304 },
   ];
-  const wordmarkFill = variant === 'light' ? '#030712' : '#2dd4a8';
-  const badge =
-    variant === 'light'
-      ? `  <g>
-    <circle cx="50" cy="50" r="50" fill="#2dd4a8"/>
-    <g clip-path="url(#disc-clip)">
-      <g stroke="#030712" stroke-width="9" fill="none" stroke-linecap="round">
-        <circle cx="50" cy="50" r="30"/>
-        <line x1="80" y1="50" x2="80" y2="95"/>
-      </g>
-      <rect x="10" y="45.5" width="80" height="9" fill="#2dd4a8"/>
-    </g>
-  </g>`
-      : `  <g>
-    <circle cx="50" cy="50" r="50" fill="#2dd4a8" mask="url(#q-knockout-mask)"/>
-  </g>`;
-  const defs =
-    variant === 'light'
-      ? `  <defs>
-    <clipPath id="disc-clip"><circle cx="50" cy="50" r="50"/></clipPath>
-  </defs>`
-      : `  <defs>
+  const defs = `  <defs>
     <mask id="q-knockout-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
       <rect x="0" y="0" width="100" height="100" fill="white"/>
       <g stroke="black" stroke-width="9" fill="none" stroke-linecap="round">
@@ -84,12 +65,15 @@ export function outlineLockup(font, variant) {
       <rect x="10" y="45.5" width="80" height="9" fill="white"/>
     </mask>
   </defs>`;
+  const badge = `  <g>
+    <circle cx="50" cy="50" r="50" fill="${ink}" mask="url(#q-knockout-mask)"/>
+  </g>`;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 346 100" width="346" height="100" overflow="visible">
 ${defs}
 ${badge}
-${letterPaths(font, letters, baselineY, wordmarkFill)}
+${letterPaths(font, letters, baselineY, ink)}
 </svg>
 `;
 }
