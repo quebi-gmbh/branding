@@ -99,20 +99,34 @@ in `src/` carry and what gets copied into `dist/svg/`.
 
 ## Master grid
 
-All values in SVG user units (badge is a 100×100 box):
+All values in SVG user units (badge is a 100×100 box; the lockup's disc
+uses the same box).
+
+**Mark** (`q-*`, standalone):
 
 - **disc**: circle r=50 centred at (50,50)
 - **bowl**: circle r=30 centred at (50,50), stroke weight 9
 - **descender**: line (80,50) → (80,95), stroke 9, `stroke-linecap="round"`
 - **cut slot**: rect x=10 y=45.5 w=80 h=9 (height matches stroke weight)
-- **wordmark**: Outfit Light (300), `font-size="115"`,
-  `dominant-baseline="middle"` anchored to y=50
-- **letter x-origins** (inside a 240×100 wordmark box): 0 / 66 / 132 / 198
-- **lockup x-origins** (inside a 346×100 lockup box): 106 / 172 / 238 / 304
 
-The q's cut slot and the e's crossbar are mathematically colinear at y=50.
-The "e" deliberately carries no cut band — its own crossbar already reads
-as the cut line.
+**Lockup** (`lockup-*`): the q is fitted to the type. The build derives
+these values from the Outfit Light outlines (`scripts/outline.mjs →
+lockupGeometry`); the numbers below are what it produces.
+
+- **wordmark**: Outfit Light (300) at `font-size` 127.66, so the u/b/i
+  stems (70.5 font units) are exactly 9 thick, the same as the q stroke.
+  Baseline at y=79.36, which puts the u's ink centre on y=50.
+- **bowl**: circle r=26.14, stroke 9. Its outer edge spans y=19.36 → 80.64,
+  exactly the u's flat top and round bottom.
+- **cut slot**: rect x=10 y=45.02 w=80 h=7.66, exactly the e's crossbar band.
+- **descender**: line (76.14,50) → (76.14,100), stroke 9, cut out through
+  the disc edge.
+- **letter x-origins**: 105.27 / 178.55 / 251.82 / 325.10 (pitch 0.574 em;
+  12.8 gap from the disc to the u's ink).
+- **viewBox**: `0 -11.02 344.89 111.02`. It starts above the disc so the b
+  ascender isn't clipped.
+
+The "e" carries no cut band; its crossbar continues the q's cut slot.
 
 ## Construction notes
 

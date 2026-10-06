@@ -202,10 +202,12 @@ async function stagePng(outlinedByName) {
     if (size < 180) continue;
     const llBuf = await rasterise(outlinedByName['lockup-light-outlined.svg'], size);
     const ldBuf = await rasterise(outlinedByName['lockup-dark-outlined.svg'], size);
-    const lh = Math.round((size * 100) / 346);
-    const padToSquare = async (buf, bg) => sharp({
-      create: { width: size, height: size, channels: 4, background: bg },
-    }).composite([{ input: buf, top: Math.round((size - lh) / 2), left: 0 }]).png().toBuffer();
+    const padToSquare = async (buf, bg) => {
+      const { height: lh } = await sharp(buf).metadata();
+      return sharp({
+        create: { width: size, height: size, channels: 4, background: bg },
+      }).composite([{ input: buf, top: Math.round((size - lh) / 2), left: 0 }]).png().toBuffer();
+    };
     const transparent = { r: 0, g: 0, b: 0, alpha: 0 };
     write(join(DIST, 'png', `lockup-light-${size}.png`), await padToSquare(llBuf, PAPER));
     // Knockout: keep the q cut-out transparent so whatever surface the asset
@@ -414,18 +416,18 @@ function renderShowcase() {
 
 <section>
   <h2>Master grid</h2>
-  <p>Badge lives in a 100×100 SVG box; lockup is 346×100. All dimensions are in SVG user units.</p>
+  <p>Badge lives in a 100×100 SVG box; the lockup's disc uses the same box, with the wordmark to its right. All dimensions are in SVG user units.</p>
   <table class="rules">
     <tbody>
       <tr><td><b>disc</b></td><td>circle r=50 centred at (50,50)</td></tr>
-      <tr><td><b>bowl</b></td><td>circle r=30 centred at (50,50), stroke weight 9</td></tr>
-      <tr><td><b>descender</b></td><td>(80,50) → (80,95), stroke 9, round cap</td></tr>
-      <tr><td><b>cut slot</b></td><td>x=10, y=45.5, w=80, h=9 (matches stroke)</td></tr>
-      <tr><td><b>wordmark</b></td><td>Outfit Light (300), font-size 115, dominant-baseline middle anchored to y=50</td></tr>
-      <tr><td><b>letter x-origins</b></td><td>0 / 66 / 132 / 198 (wordmark) · 106 / 172 / 238 / 304 (lockup)</td></tr>
+      <tr><td><b>mark · bowl</b></td><td>circle r=30, stroke 9; descender (80,50) → (80,95), round cap; cut slot y=45.5, h=9</td></tr>
+      <tr><td><b>lockup · wordmark</b></td><td>Outfit Light (300) at font-size 127.66, so the u/b/i stems are exactly 9 wide; baseline y=79.36</td></tr>
+      <tr><td><b>lockup · bowl</b></td><td>circle r=26.14, stroke 9: outer edge y=19.36 → 80.64, exactly the u's flat top and round bottom</td></tr>
+      <tr><td><b>lockup · cut slot</b></td><td>y=45.02, h=7.66: exactly the e's crossbar</td></tr>
+      <tr><td><b>lockup · descender</b></td><td>x=76.14 (on the bowl), stroke 9, cut out through the disc edge</td></tr>
     </tbody>
   </table>
-  <p>The q’s cut slot and the e’s crossbar are mathematically colinear at y=50 — that’s the hinge that binds the whole mark together. The “e” carries no cut band because its own crossbar already reads as the cut.</p>
+  <p>In the lockup, the q is fitted to the type: same stroke as the u, same height as the u, and the cut slot is the e’s crossbar continued. The build derives these values from the Outfit Light outlines (<code>scripts/outline.mjs → lockupGeometry</code>).</p>
 </section>
 
 <section>
