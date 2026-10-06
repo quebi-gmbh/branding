@@ -26,7 +26,8 @@ pnpm install
 pnpm run build              # populates dist/
 pnpm run build:clean        # wipes dist/ first
 pnpm run package            # build + zip → quebi-branding.zip
-pnpm run catalogue          # build + embed every PNG into quebi-design-system.html
+pnpm run catalogue          # build + embed every PNG into a local design-system page
+                            # (default ./quebi-design-system.html, git-ignored; or pass a path)
 ```
 
 First run downloads the Outfit variable font (SIL OFL) into
@@ -55,8 +56,8 @@ Manual runs (`workflow_dispatch`) produce the same zip as a CI artefact.
 
 # Design system (authoritative)
 
-Source of truth: [`quebi-design-system.html`](quebi-design-system.html)
-(open it in a browser). The logo is **Ink & Paper** — mint/teal is retired
+Source of truth: the quebi design system page (`quebi-design-system.html`,
+kept outside this repo). The logo is **Ink & Paper** — mint/teal is retired
 and must not appear anywhere.
 
 | Token     | Hex       |

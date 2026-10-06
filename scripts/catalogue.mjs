@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-// Embed every built PNG logo into quebi-design-system.html as a "catalogue"
-// section (base64, so the page stays a single self-contained file).
+// Embed every built PNG logo into the quebi design-system page as a
+// "catalogue" section (base64, so the page stays a single self-contained
+// file). The page is not part of this repo: pass its path, or keep a copy at
+// ./quebi-design-system.html (git-ignored).
 // Re-runnable: the section, its styles and its nav link sit between
 // <!-- catalogue:… --> markers and are replaced on each run.
 //
-// Usage:  node scripts/catalogue.mjs   (after `pnpm run build`)
+// Usage:  node scripts/catalogue.mjs [path/to/quebi-design-system.html]   (after `pnpm run build`)
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -14,10 +16,14 @@ import sharp from 'sharp';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const DIST = join(ROOT, 'dist');
-const PAGE = join(ROOT, 'quebi-design-system.html');
+const PAGE = resolve(process.argv[2] ?? join(ROOT, 'quebi-design-system.html'));
 
 if (!existsSync(join(DIST, 'manifest.json'))) {
   console.error('dist/manifest.json missing — run `pnpm run build` first');
+  process.exit(1);
+}
+if (!existsSync(PAGE)) {
+  console.error(`design system page not found: ${PAGE}`);
   process.exit(1);
 }
 const manifest = JSON.parse(readFileSync(join(DIST, 'manifest.json'), 'utf8'));
